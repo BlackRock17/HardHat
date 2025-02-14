@@ -1,4 +1,5 @@
 require("@nomicfoundation/hardhat-toolbox");
+require("./tasks/token-tasks");
 
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
