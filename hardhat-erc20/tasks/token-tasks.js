@@ -33,3 +33,19 @@ task("transfer-tokens", "Transfers tokens between addresses")
       console.error("Error transferring tokens:", error);
     }
   });
+
+  task("check-balance", "Checks token balance for a specific address")
+  .addParam("address", "The address to check balance for")
+  .setAction(async (taskArgs, hre) => {
+    try {
+      const SimpleToken = await hre.ethers.getContractFactory("SimpleToken");
+      const simpleToken = await SimpleToken.attach("0x5FbDB2315678afecb367f032d93F642f64180aa3");
+
+      const balance = await simpleToken.balanceOf(taskArgs.address);
+      const balanceInEther = hre.ethers.formatEther(balance);
+      
+      console.log(`Balance of ${taskArgs.address}: ${balanceInEther} STK`);
+    } catch (error) {
+      console.error("Error checking balance:", error);
+    }
+  });
