@@ -15,6 +15,7 @@ struct Auction {
     uint256 timeExtentionWindow;
     uint256 timeExtentionIncr;
     address seller;
+    bool nftClaimed;
 }
 
 error CannonBeZero();
@@ -23,6 +24,9 @@ error InvalidEndTime(string argument);
 error InsufficientBid();
 error NotInBidPeriod();
 error NotValidAuction();
+error AuctionUnfinished();
+error NotClaimer();
+error AlreadyClaimed();
 
 contract AuctionHouse {
     uint256 MIN_AUCTION_DURATION = 1 days;
@@ -69,7 +73,8 @@ contract AuctionHouse {
             minBidIncr: minBidIncr,
             timeExtentionWindow: timeExtentionWindow,
             timeExtentionIncr: timeExtentionIncr,
-            seller: msg.sender
+            seller: msg.sender,
+            nftClaimed: false
         });
 
         IERC721(tokenAddress).transferFrom(msg.sender, address(this), tokenId);
@@ -99,5 +104,36 @@ contract AuctionHouse {
         }
 
         highestBidders[auctionId] = msg.sender;
+    }
+
+    function claimNFT(uint256 auctionId) external {
+        Auction storage auction = auctions[auctionId];
+        if (block.timestamp <= auction.endTime) {
+            revert AuctionUnfinished();
+        }
+
+        if (auction.nftClaimed) {
+            revert AlreadyClaimed();
+        }
+
+        address highestBidder = highestBidders[auctionId];
+        if (
+            msg.sender != highestBidder &&
+            highestBidders[auctionId] != address(0) &&
+            msg.sender != auction.seller
+        ) {
+            revert NotClaimer();
+        }
+
+        auction.nftClaimed = true;
+
+        address reciever = msg.sender == highestBidder
+            ? highestBidder
+            : auction.seller;
+        IERC721(auction.nftAddress).safeTransferFrom(
+            address(this),
+            reciever,
+            auction.tokenId
+        );
     }
 }
