@@ -28,6 +28,7 @@ error AuctionUnfinished();
 error NotClaimer();
 error AlreadyClaimed();
 error HighestBidder();
+error NoWinner();
 
 contract AuctionHouse {
     uint256 MIN_AUCTION_DURATION = 1 days;
@@ -150,6 +151,14 @@ contract AuctionHouse {
             }("");
 
             require(sent, "Failed to send Ether");
+        }
+    }
+
+    function claimReward(uint256 auctionId) external auctionFinished(auctionId) {
+        uint256 reward = bids[auctionId][highestBidders[auctionId]];
+
+        if (reward == 0) {
+            revert NoWinner();
         }
     }
 
