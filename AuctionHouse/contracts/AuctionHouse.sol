@@ -27,6 +27,7 @@ error NotValidAuction();
 error AuctionUnfinished();
 error NotClaimer();
 error AlreadyClaimed();
+error HighestBidder();
 
 contract AuctionHouse {
     uint256 MIN_AUCTION_DURATION = 1 days;
@@ -103,6 +104,7 @@ contract AuctionHouse {
             auction.endTime += auction.timeExtentionIncr;
         }
 
+        bids[auctionId][msg.sender] += msg.value;
         highestBidders[auctionId] = msg.sender;
     }
 
@@ -135,5 +137,22 @@ contract AuctionHouse {
             reciever,
             auction.tokenId
         );
+    }
+
+    function claimBid(uint256 auctionId) external {
+        uint256 userBid = bids[auctionId][msg.sender];
+
+        if (highestBidders[auctionId] == msg.sender) {
+            revert HighestBidder();
+        }
+
+        if (bids[auctionId][msg.sender] != 0) {
+            bids[auctionId][msg.sender] = 0;
+            (bool sent, ) = payable(msg.sender).call{
+                value: userBid
+            }("");
+
+            require(sent, "Failed to send Ether");
+        }
     }
 }
