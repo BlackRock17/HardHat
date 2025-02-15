@@ -2,8 +2,8 @@
 // Compatible with OpenZeppelin Contracts ^5.0.0
 pragma solidity 0.8.25;
 
-import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+
 
 struct Auction {
     uint256 minPrice;
@@ -14,20 +14,44 @@ struct Auction {
     address seller;
 }
 
+error CannonBeZero();
+error InvalidStartTime();
+error InvalidEndTime(string argument);
+
 contract AuctionHouse {
-    uint256 private _nextTokenId;
+    uint256 MIN_AUCTION_DURATION = 1 days;
+    uint256 MAX_AUCTION_DURATION = 60 days;
+    uint256 private _nextAuctionId;
 
     mapping (uint256 => Auction) public auctions;
 
     function createAuction(
+        uint256 tokenId,
+        address tokenAddress,
         uint256 minPrice,
         uint256 startTime,
         uint256 endTime,
         uint256 minBidIncr,
         uint256 timeExtentionRule
-    ) external payable {
-        uint256 tokenId = _nextTokenId++;
-        auctions[tokenId] = Auction({
+    ) external {
+        if (minPrice == 0) {
+            revert CannonBeZero();
+        }
+
+        if (startTime < block.timestamp) {
+            revert InvalidStartTime();
+        }
+
+        if (endTime < startTime + MIN_AUCTION_DURATION) {
+            revert InvalidEndTime("TOO_LOW");
+        }
+
+        if (endTime > startTime + MAX_AUCTION_DURATION) {
+            revert InvalidEndTime("TOO_HIGH");
+        }
+
+        uint256 auctionId = _nextAuctionId++;
+        auctions[auctionId] = Auction({
             minPrice: minPrice,
             startTime: startTime,
             endTime: endTime,
@@ -35,5 +59,7 @@ contract AuctionHouse {
             timeExtentionRule: timeExtentionRule,
             seller: msg.sender
         });
+
+        IERC721(tokenAddress).transferFrom(msg.sender, address(this), tokenId);
     }
 }
