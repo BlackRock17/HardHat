@@ -95,10 +95,12 @@ contract AuctionHouse {
             revert NotInBidPeriod();
         }
 
+        uint256 newBid = bids[auctionId][msg.sender] + msg.value;
+
         if (
-            msg.value < auction.minPrice ||
+            newBid < auction.minPrice ||
             (highestBidders[auctionId] != address(0) &&
-                msg.value < bids[auctionId][highestBidders[auctionId]] + auction.minBidIncr)
+                newBid < bids[auctionId][highestBidders[auctionId]] + auction.minBidIncr)
         ) {
             revert InsufficientBid();
         }
@@ -107,7 +109,7 @@ contract AuctionHouse {
             auction.endTime += auction.timeExtentionIncr;
         }
 
-        bids[auctionId][msg.sender] += msg.value;
+        bids[auctionId][msg.sender] = newBid;
         highestBidders[auctionId] = msg.sender;
     }
 
