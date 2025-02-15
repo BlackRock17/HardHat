@@ -17,6 +17,7 @@ struct Auction {
 error CannonBeZero();
 error InvalidStartTime();
 error InvalidEndTime(string argument);
+error InsufficientBid();
 
 contract AuctionHouse {
     uint256 MIN_AUCTION_DURATION = 1 days;
@@ -24,6 +25,8 @@ contract AuctionHouse {
     uint256 private _nextAuctionId;
 
     mapping (uint256 => Auction) public auctions;
+    mapping (uint256 auctionId => mapping(address bidder => uint256 bid)) public bids;
+    mapping (uint256 auctionId => address highestBidder) public highestBidders;
 
     function createAuction(
         uint256 tokenId,
@@ -61,5 +64,17 @@ contract AuctionHouse {
         });
 
         IERC721(tokenAddress).transferFrom(msg.sender, address(this), tokenId);
+    }
+
+    function bid(uint256 auctionId) external payable {
+        Auction memory auction = auctions[auctionId];
+
+        if (
+            msg.value < auction.minPrice ||
+            (highestBidders[auctionId] != address(0) &&
+                msg.value < bids[auctionId][highestBidders[auctionId]] + auction.minBidIncr)
+        ) {
+            revert InsufficientBid();
+        }
     }
 }
