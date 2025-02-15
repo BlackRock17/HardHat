@@ -10,18 +10,30 @@ struct Auction {
     uint256 startTime;
     uint256 endTime;
     uint256 minBidIncr;
-    uint256 tomeExtentionRule;
+    uint256 timeExtentionRule;
     address seller;
 }
 
 contract AuctionHouse {
+    uint256 private _nextTokenId;
+
+    mapping (uint256 => Auction) public auctions;
+
     function createAuction(
         uint256 minPrice,
         uint256 startTime,
         uint256 endTime,
         uint256 minBidIncr,
-        uint256 tomeExtentionRule
+        uint256 timeExtentionRule
     ) external payable {
-
+        uint256 tokenId = _nextTokenId++;
+        auctions[tokenId] = Auction({
+            minPrice: minPrice,
+            startTime: startTime,
+            endTime: endTime,
+            minBidIncr: minBidIncr,
+            timeExtentionRule: timeExtentionRule,
+            seller: msg.sender
+        });
     }
 }
