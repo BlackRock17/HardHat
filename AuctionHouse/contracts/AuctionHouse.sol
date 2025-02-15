@@ -16,6 +16,7 @@ struct Auction {
     uint256 timeExtentionIncr;
     address seller;
     bool nftClaimed;
+    bool rewardClaimed;
 }
 
 error CannonBeZero();
@@ -76,7 +77,8 @@ contract AuctionHouse {
             timeExtentionWindow: timeExtentionWindow,
             timeExtentionIncr: timeExtentionIncr,
             seller: msg.sender,
-            nftClaimed: false
+            nftClaimed: false,
+            rewardClaimed: false
         });
 
         IERC721(tokenAddress).transferFrom(msg.sender, address(this), tokenId);
@@ -146,11 +148,7 @@ contract AuctionHouse {
 
         if (bids[auctionId][msg.sender] != 0) {
             bids[auctionId][msg.sender] = 0;
-            (bool sent, ) = payable(msg.sender).call{
-                value: userBid
-            }("");
-
-            require(sent, "Failed to send Ether");
+            _transferETH(payable(msg.sender), userBid);
         }
     }
 
@@ -160,6 +158,22 @@ contract AuctionHouse {
         if (reward == 0) {
             revert NoWinner();
         }
+
+        Auction storage auction = auctions[auctionId];
+
+        if (auction.rewardClaimed) {
+            revert AlreadyClaimed();
+        }
+
+        auction.rewardClaimed = true;
+
+        _transferETH(payable(msg.sender), reward);
+    }
+
+    function _transferETH(address payable to, uint256 amount) private {
+        (bool sent, ) = to.call{value: amount}("");
+
+        require(sent, "Failed to send Ether");
     }
 
     modifier auctionFinished(uint256 auctionId) {
