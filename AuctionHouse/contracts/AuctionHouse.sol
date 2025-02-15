@@ -6,11 +6,14 @@ import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
 
 struct Auction {
+    uint256 tokenId;
+    address nftAddress;
     uint256 minPrice;
     uint256 startTime;
     uint256 endTime;
     uint256 minBidIncr;
-    uint256 timeExtentionRule;
+    uint256 timeExtentionWindow;
+    uint256 timeExtentionIncr;
     address seller;
 }
 
@@ -18,6 +21,8 @@ error CannonBeZero();
 error InvalidStartTime();
 error InvalidEndTime(string argument);
 error InsufficientBid();
+error NotInBidPeriod();
+error NotValidAuction();
 
 contract AuctionHouse {
     uint256 MIN_AUCTION_DURATION = 1 days;
@@ -35,7 +40,8 @@ contract AuctionHouse {
         uint256 startTime,
         uint256 endTime,
         uint256 minBidIncr,
-        uint256 timeExtentionRule
+        uint256 timeExtentionWindow,
+        uint256 timeExtentionIncr
     ) external {
         if (minPrice == 0) {
             revert CannonBeZero();
@@ -55,11 +61,14 @@ contract AuctionHouse {
 
         uint256 auctionId = _nextAuctionId++;
         auctions[auctionId] = Auction({
+            tokenId: tokenId,
+            nftAddress: tokenAddress,
             minPrice: minPrice,
             startTime: startTime,
             endTime: endTime,
             minBidIncr: minBidIncr,
-            timeExtentionRule: timeExtentionRule,
+            timeExtentionWindow: timeExtentionWindow,
+            timeExtentionIncr: timeExtentionIncr,
             seller: msg.sender
         });
 
@@ -69,6 +78,14 @@ contract AuctionHouse {
     function bid(uint256 auctionId) external payable {
         Auction memory auction = auctions[auctionId];
 
+        if (auction.nftAddress == address(0)) {
+            revert NotValidAuction();
+        }
+
+        if (block.timestamp < auction.startTime || block.timestamp > auction.endTime) {
+            revert NotInBidPeriod();
+        }
+
         if (
             msg.value < auction.minPrice ||
             (highestBidders[auctionId] != address(0) &&
@@ -76,5 +93,11 @@ contract AuctionHouse {
         ) {
             revert InsufficientBid();
         }
+
+        if (block.timestamp > auction.endTime - auction.timeExtentionWindow) {
+            auction.endTime += auction.timeExtentionIncr;
+        }
+
+        highestBidders[auctionId] = msg.sender;
     }
 }
