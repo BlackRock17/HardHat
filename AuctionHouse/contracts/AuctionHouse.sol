@@ -108,11 +108,8 @@ contract AuctionHouse {
         highestBidders[auctionId] = msg.sender;
     }
 
-    function claimNFT(uint256 auctionId) external {
+    function claimNFT(uint256 auctionId) external auctionFinished(auctionId) {
         Auction storage auction = auctions[auctionId];
-        if (block.timestamp <= auction.endTime) {
-            revert AuctionUnfinished();
-        }
 
         if (auction.nftClaimed) {
             revert AlreadyClaimed();
@@ -154,5 +151,13 @@ contract AuctionHouse {
 
             require(sent, "Failed to send Ether");
         }
+    }
+
+    modifier auctionFinished(uint256 auctionId) {
+        if (block.timestamp <= auctions[auctionId].endTime) {
+            revert AuctionUnfinished();
+        }
+
+        _;
     }
 }
