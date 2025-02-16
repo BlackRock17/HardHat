@@ -19,6 +19,12 @@ contract StakingPool is ReentrancyGuard {
     event Staked(address indexed user, uint256 amount);
     event Unstaked(address indexed user, uint256 amount);
     event RewardsClaimed(address indexed user, uint256 amount);
+    
+    // Custom errors
+    error ZeroAmount();
+    error InsufficientBalance();
+    error NoStakedBalance();
+    error NoRewardsAccumulated();
 
     constructor(address _stakeXToken) {
         stakeXToken = StakeX(_stakeXToken);
@@ -36,7 +42,7 @@ contract StakingPool is ReentrancyGuard {
     }
 
     function stake(uint256 _amount) external nonReentrant {
-        require(_amount > 0, "ZeroAmount");
+        if (_amount == 0) revert ZeroAmount();
         
         // Update rewards before changing stake
         uint256 rewards = calculateRewards(msg.sender);
@@ -50,14 +56,14 @@ contract StakingPool is ReentrancyGuard {
         
         // Transfer tokens to this contract
         bool success = stakeXToken.transferFrom(msg.sender, address(this), _amount);
-        require(success, "InsufficientBalance");
+        if (!success) revert InsufficientBalance();
         
         emit Staked(msg.sender, _amount);
     }
 
     function unstake(uint256 _amount) external nonReentrant {
-        require(_amount > 0, "ZeroAmount");
-        require(stakedBalance[msg.sender] >= _amount, "InsufficientBalance");
+        if (_amount == 0) revert ZeroAmount();
+        if (stakedBalance[msg.sender] < _amount) revert InsufficientBalance();
         
         // Calculate and update rewards before unstaking
         uint256 rewards = calculateRewards(msg.sender);
@@ -71,7 +77,7 @@ contract StakingPool is ReentrancyGuard {
         
         // Transfer tokens back to user
         bool success = stakeXToken.transfer(msg.sender, _amount);
-        require(success, "InsufficientBalance");
+        if (!success) revert InsufficientBalance();
         
         emit Unstaked(msg.sender, _amount);
     }
@@ -81,7 +87,7 @@ contract StakingPool is ReentrancyGuard {
         uint256 currentRewards = calculateRewards(msg.sender);
         uint256 totalRewards = accumulatedRewards[msg.sender] + currentRewards;
         
-        require(totalRewards > 0, "NoRewardsAccumulated");
+        if (totalRewards == 0) revert NoRewardsAccumulated();
         
         // Reset accumulated rewards and update staking time
         accumulatedRewards[msg.sender] = 0;
