@@ -85,7 +85,7 @@ contract AuctionHouse {
     }
 
     function bid(uint256 auctionId) external payable {
-        Auction memory auction = auctions[auctionId];
+        Auction storage auction = auctions[auctionId];
 
         if (auction.nftAddress == address(0)) {
             revert NotValidAuction();

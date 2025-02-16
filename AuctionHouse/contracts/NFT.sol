@@ -11,10 +11,16 @@ contract MyToken is ERC721, Ownable {
     constructor(address initialOwner)
         ERC721("MyToken", "MTK")
         Ownable(initialOwner)
-    {}
+    {
+        _customMint(msg.sender);
+    }
 
     function safeMint(address to) public onlyOwner {
-        uint256 tokenId = _nextTokenId++;
+        _customMint(to);
+    }
+
+    function _customMint(address to) internal {
+         uint256 tokenId = _nextTokenId++;
         _safeMint(to, tokenId);
     }
 }
