@@ -60,4 +60,25 @@ contract StakingPool is ReentrancyGuard {
         
         emit Staked(msg.sender, _amount);
     }
+
+    function unstake(uint256 _amount) external nonReentrant {
+        if (_amount == 0) revert ZeroAmount();
+        if (stakedBalance[msg.sender] < _amount) revert InsufficientBalance();
+        
+        // Calculate and update rewards before unstaking
+        uint256 rewards = calculateRewards(msg.sender);
+        accumulatedRewards[msg.sender] += rewards;
+        
+        // Update staking time for remaining balance
+        stakingStartTime[msg.sender] = block.timestamp;
+        
+        // Update staked balance
+        stakedBalance[msg.sender] -= _amount;
+        
+        // Transfer tokens back to user
+        bool success = stakeXToken.transfer(msg.sender, _amount);
+        if (!success) revert InsufficientBalance();
+        
+        emit Unstaked(msg.sender, _amount);
+    }
 }
