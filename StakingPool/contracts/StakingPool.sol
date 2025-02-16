@@ -40,4 +40,24 @@ contract StakingPool is ReentrancyGuard {
         // For precise calculation: (amount * 5 * timeElapsed) / (100 * 365 days)
         return (stakedBalance[_user] * 5 * timeElapsed) / (100 * 365 days);
     }
+
+    function stake(uint256 _amount) external nonReentrant {
+        if (_amount == 0) revert ZeroAmount();
+        
+        // Update rewards before changing stake
+        uint256 rewards = calculateRewards(msg.sender);
+        accumulatedRewards[msg.sender] += rewards;
+        
+        // Update staking time
+        stakingStartTime[msg.sender] = block.timestamp;
+        
+        // Update staked balance
+        stakedBalance[msg.sender] += _amount;
+        
+        // Transfer tokens to this contract
+        bool success = stakeXToken.transferFrom(msg.sender, address(this), _amount);
+        if (!success) revert InsufficientBalance();
+        
+        emit Staked(msg.sender, _amount);
+    }
 }
