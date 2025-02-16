@@ -1,7 +1,7 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.27;
 
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "./StakeX.sol";
 
 contract StakingPool is ReentrancyGuard {
@@ -19,12 +19,6 @@ contract StakingPool is ReentrancyGuard {
     event Staked(address indexed user, uint256 amount);
     event Unstaked(address indexed user, uint256 amount);
     event RewardsClaimed(address indexed user, uint256 amount);
-    
-    // Custom errors
-    error ZeroAmount();
-    error InsufficientBalance();
-    error NoStakedBalance();
-    error NoRewardsAccumulated();
 
     constructor(address _stakeXToken) {
         stakeXToken = StakeX(_stakeXToken);
@@ -42,7 +36,7 @@ contract StakingPool is ReentrancyGuard {
     }
 
     function stake(uint256 _amount) external nonReentrant {
-        if (_amount == 0) revert ZeroAmount();
+        require(_amount > 0, "ZeroAmount");
         
         // Update rewards before changing stake
         uint256 rewards = calculateRewards(msg.sender);
@@ -56,14 +50,14 @@ contract StakingPool is ReentrancyGuard {
         
         // Transfer tokens to this contract
         bool success = stakeXToken.transferFrom(msg.sender, address(this), _amount);
-        if (!success) revert InsufficientBalance();
+        require(success, "InsufficientBalance");
         
         emit Staked(msg.sender, _amount);
     }
 
     function unstake(uint256 _amount) external nonReentrant {
-        if (_amount == 0) revert ZeroAmount();
-        if (stakedBalance[msg.sender] < _amount) revert InsufficientBalance();
+        require(_amount > 0, "ZeroAmount");
+        require(stakedBalance[msg.sender] >= _amount, "InsufficientBalance");
         
         // Calculate and update rewards before unstaking
         uint256 rewards = calculateRewards(msg.sender);
@@ -77,7 +71,7 @@ contract StakingPool is ReentrancyGuard {
         
         // Transfer tokens back to user
         bool success = stakeXToken.transfer(msg.sender, _amount);
-        if (!success) revert InsufficientBalance();
+        require(success, "InsufficientBalance");
         
         emit Unstaked(msg.sender, _amount);
     }
@@ -87,7 +81,7 @@ contract StakingPool is ReentrancyGuard {
         uint256 currentRewards = calculateRewards(msg.sender);
         uint256 totalRewards = accumulatedRewards[msg.sender] + currentRewards;
         
-        if (totalRewards == 0) revert NoRewardsAccumulated();
+        require(totalRewards > 0, "NoRewardsAccumulated");
         
         // Reset accumulated rewards and update staking time
         accumulatedRewards[msg.sender] = 0;
