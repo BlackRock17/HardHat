@@ -81,4 +81,21 @@ contract StakingPool is ReentrancyGuard {
         
         emit Unstaked(msg.sender, _amount);
     }
+
+    function claimRewards() external nonReentrant {
+        // Calculate current rewards
+        uint256 currentRewards = calculateRewards(msg.sender);
+        uint256 totalRewards = accumulatedRewards[msg.sender] + currentRewards;
+        
+        if (totalRewards == 0) revert NoRewardsAccumulated();
+        
+        // Reset accumulated rewards and update staking time
+        accumulatedRewards[msg.sender] = 0;
+        stakingStartTime[msg.sender] = block.timestamp;
+        
+        // Mint rewards to user
+        stakeXToken.mint(msg.sender, totalRewards);
+        
+        emit RewardsClaimed(msg.sender, totalRewards);
+    }
 }
